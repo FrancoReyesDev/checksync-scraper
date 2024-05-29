@@ -8,7 +8,7 @@ type DetailedMovement = {
 	movementId: string;
 	link: string;
 	date: string | null;
-	ammount: number;
+	amount: number;
 };
 
 const mpSteps = async ({page, browser}: {page: Page; browser: Browser}) => {
@@ -27,13 +27,13 @@ const mpSteps = async ({page, browser}: {page: Page; browser: Browser}) => {
 			.map(a => {
 				const link = a.href;
 				const date = a.getElementsByTagName('time')[0]!.textContent;
-				const ammount =
+				const amount =
 					a
 						.getElementsByClassName('andes-money-amount__fraction')[0]!
 						.textContent!.replaceAll('.', '') +
 					'.' +
 					a.getElementsByClassName('andes-money-amount__cents')[0]!.textContent;
-				return {link, date, ammount: Number(ammount)};
+				return {link, date, amount: Number(amount)};
 			}),
 	);
 
@@ -106,6 +106,7 @@ const mpSteps = async ({page, browser}: {page: Page; browser: Browser}) => {
 
 	const detailedMovemets = await Promise.all(detailedMovemetsPromises);
 	await browser.close();
+	console.log(detailedMovemets);
 	return detailedMovemets;
 };
 
