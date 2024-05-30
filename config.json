@@ -9,7 +9,9 @@
 			"loggedInPathHint": "home",
 			"scrap": {
 				"frequency": 1800000,
-				"steps": "mercadoPago"
+				"steps": "mercadoPago",
+				"startFromId": "75279230369",
+				"maxPage": 10
 			}
 		}
 	]
