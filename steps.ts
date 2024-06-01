@@ -178,10 +178,10 @@ const mpSteps = async ({
 	const detailedMovements: DetailedMovement[] = [];
 	for (
 		let pageNumber = 1,
+			inMaxPage = false,
 			foundLastIndex = false,
-			startSurpassed = false,
-			inMaxPage = false;
-		foundLastIndex === false && startSurpassed === false;
+			startSurpassed = false;
+		foundLastIndex === false && startSurpassed === false && inMaxPage === false;
 		pageNumber++
 	) {
 		const pageDetailedMovemets = await readPage(pageNumber);
@@ -208,7 +208,7 @@ const mpSteps = async ({
 	return detailedMovements;
 };
 
-export const steps: Record<
+export const accountScrapers: Record<
 	string,
 	({
 		page,
