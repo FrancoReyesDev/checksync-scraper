@@ -225,6 +225,7 @@ export const runner = async ({
 }) => {
 	const detailedMovements: DetailedMovement[] = [];
 	const failedAttempts: Movement[] = [];
+
 	for (
 		let pageNumber = 1,
 			inMaxPage = false,
@@ -239,7 +240,7 @@ export const runner = async ({
 			pageNumber,
 		});
 		pageDetailedMovemets.forEach(movement => {
-			if (movement === null) return;
+			if (movement === null || !('id' in movement)) return;
 
 			if (movement.id === startFromId) {
 				startSurpassed = true;
