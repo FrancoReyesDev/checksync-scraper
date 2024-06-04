@@ -1,8 +1,8 @@
 import {Browser} from 'puppeteer';
 import {MercadoPagoScraper, Movement} from './types';
 
-export const mercadoPagoScraper = (): MercadoPagoScraper => {
-	const config: MercadoPagoScraper['config'] = {
+export const mercadoPagoScraper: MercadoPagoScraper = () => {
+	const config: ReturnType<MercadoPagoScraper>['config'] = {
 		color: '',
 		loginUrl: 'https://www.mercadolibre.com/jms/mla/lgz/login?platform_id=MP',
 		loggedOrigin: 'https://www.mercadopago.com.ar',
@@ -14,17 +14,18 @@ export const mercadoPagoScraper = (): MercadoPagoScraper => {
 		},
 	};
 
-	const status: MercadoPagoScraper['status'] = {
+	const status: ReturnType<MercadoPagoScraper>['status'] = {
 		isLoggedIn: false,
 		isWorking: false,
 	};
 
-	let sessionCookies: MercadoPagoScraper['sessionCookies'] = [];
+	let sessionCookies: ReturnType<MercadoPagoScraper>['sessionCookies'] = [];
 
-	const login: MercadoPagoScraper['login'] = async newSessionCookies => {
-		sessionCookies = newSessionCookies;
-		status.isLoggedIn = true;
-	};
+	const login: ReturnType<MercadoPagoScraper>['login'] =
+		async newSessionCookies => {
+			sessionCookies = newSessionCookies;
+			status.isLoggedIn = true;
+		};
 
 	const logout = () => {
 		sessionCookies = [];

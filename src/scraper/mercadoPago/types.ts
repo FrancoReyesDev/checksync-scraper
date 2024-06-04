@@ -1,7 +1,5 @@
-import {Scraper} from 'checksync-scraper/types/Scraper';
-import {ScraperConfig} from 'checksync-scraper/types/ScraperConfig';
-
-export type Config = ScraperConfig;
+import {Scraper} from 'src/types/Scraper';
+import {ScraperConfig} from 'src/types/ScraperConfig';
 
 export type Movement = {
 	url: string;
@@ -19,4 +17,4 @@ export interface DetailedMovement extends Movement {
 	date: string;
 }
 
-export type MercadoPagoScraper = Scraper<Config, DetailedMovement>;
+export type MercadoPagoScraper = Scraper<ScraperConfig, DetailedMovement>;

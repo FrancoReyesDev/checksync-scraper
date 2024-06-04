@@ -1,7 +1,7 @@
 import {Cookie} from 'puppeteer';
 import {ScraperConfig} from './ScraperConfig.js';
 
-export type Scraper<C extends ScraperConfig, Movement> = {
+export type Scraper<C extends ScraperConfig, Movement> = () => {
 	config: C;
 	status: {
 		isWorking: boolean;

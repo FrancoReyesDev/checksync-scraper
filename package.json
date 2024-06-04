@@ -1,0 +1,23 @@
+{
+	"name": "checksync-scraper",
+	"version": "1.0.0",
+	"types": "dist/types/index.d.ts",
+	"directories": {
+		"lib": "lib"
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"start": "node dist/index.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"devDependencies": {
+		"typescript": "^5.4.5"
+	},
+	"dependencies": {
+		"puppeteer": "^22.10.0"
+	}
+}

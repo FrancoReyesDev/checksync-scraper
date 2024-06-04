@@ -5,7 +5,7 @@ export type LoginHandler = {
 	close: () => undefined | Promise<void>;
 };
 
-export const loginClosure = async (
+export const loginHandler = async (
 	loginUrl: string,
 	loggedPathHint: string,
 ): Promise<LoginHandler> => {
