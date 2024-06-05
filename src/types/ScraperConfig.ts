@@ -1,4 +1,5 @@
 export type ScraperConfig = {
+	name: string;
 	color?: string;
 	loginUrl: string;
 	loggedOrigin: string;

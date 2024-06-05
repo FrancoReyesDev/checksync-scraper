@@ -1,4 +1,4 @@
-import {Scraper} from 'src/types/Scraper';
+import {ScraperDependencies, ScraperFactory} from 'src/types/ScraperFactory';
 import {ScraperConfig} from 'src/types/ScraperConfig';
 
 export type Movement = {
@@ -17,4 +17,11 @@ export interface DetailedMovement extends Movement {
 	date: string;
 }
 
-export type MercadoPagoScraper = Scraper<ScraperConfig, DetailedMovement>;
+export type MercadoPagoScraperDependencies = ScraperDependencies<
+	Movement | DetailedMovement
+>;
+
+export type MercadoPagoScraper = ScraperFactory<
+	ScraperConfig,
+	MercadoPagoScraperDependencies
+>;

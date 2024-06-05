@@ -1,18 +1,23 @@
-import {Manager as ManagerType} from 'src/types/Manager';
-import {mercadoPagoScraper} from './mercadoPago';
-import {Scraper} from 'src/types/Scraper';
-import {ScraperConfig} from 'src/types/ScraperConfig';
+import {
+	Manager,
+	ManagerScrapersDependencies,
+	Scrapers,
+} from 'src/types/Manager';
 
-export const Manager: ManagerType = () => {
-	const scrapers: {[name: string]: Scraper<ScraperConfig, any>} = {
+import {mercadoPagoScraper} from './mercadoPago/index';
+
+export const manager: Manager = dependencies => {
+	const scrapers = {
 		mp: mercadoPagoScraper,
 	};
 
 	const initScrapers = () => {
 		return Object.entries(scrapers).reduce((acc, [name, scraper]) => {
-			acc[name] = scraper();
+			acc[name as keyof Scrapers] = scraper(
+				dependencies[name as keyof ManagerScrapersDependencies],
+			);
 			return acc;
-		}, {} as ReturnType<ManagerType>['scrapers']);
+		}, {} as Scrapers);
 	};
 
 	return {scrapers: initScrapers()};

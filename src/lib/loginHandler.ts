@@ -1,19 +1,18 @@
-import puppeteer, {Browser, Cookie} from 'puppeteer';
+import puppeteer, {Browser} from 'puppeteer';
+import {LoginHandler} from 'src/types/Lib';
 
-export type LoginHandler = {
-	login: () => Promise<{cookies: Cookie[]} | {error: string}>;
-	close: () => undefined | Promise<void>;
-};
-
-export const loginHandler = async (
-	loginUrl: string,
-	loggedPathHint: string,
-): Promise<LoginHandler> => {
+export const loginHandler = ({
+	loggedPathHint,
+	loginUrl,
+}: {
+	loginUrl: string;
+	loggedPathHint: string;
+}): LoginHandler => {
 	let browser: null | Browser = null;
 
 	const login = async () => {
 		try {
-			if (browser === null) browser = await puppeteer.launch({headless: false}); // Cambia a true para ejecución sin interfaz gráfica
+			if (browser === null) browser = await puppeteer.launch({headless: false}); // Login siempre sera headless false
 			const page = await browser.newPage();
 			await page.goto(loginUrl);
 

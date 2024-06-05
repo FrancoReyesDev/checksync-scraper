@@ -1,5 +1,9 @@
 import {Browser, Page} from 'puppeteer';
-import {DetailedMovement, Movement} from './types';
+import {
+	DetailedMovement,
+	MercadoPagoScraperDependencies,
+	Movement,
+} from './types';
 
 const goToActivities = async ({
 	page,
@@ -13,29 +17,52 @@ const goToActivities = async ({
 	});
 };
 
+const getFinalPageNumberOnActivities = async ({page}: {page: Page}) => {
+	await goToActivities({page, pageNumber: 1});
+	const paginationButton = 'li.andes-pagination__button';
+
+	await page.waitForSelector(paginationButton);
+	return await page.$$eval(paginationButton, buttons => {
+		const getBeforeLastButton =
+			buttons[buttons.length - 2] ?? buttons[buttons.length - 1];
+		return getBeforeLastButton !== undefined
+			? Number(getBeforeLastButton.textContent) ?? 1
+			: 1;
+	});
+};
+
 const getPageMovements = async ({page}: {page: Page}) => {
 	const label = 'a.ui-row__link';
 	const negativeSymbol = 'andes-money-amount__negative-symbol';
 	const amountFraction = 'andes-money-amount__fraction';
 	const amountCents = 'andes-money-amount__cents';
-
 	const formatAmount = (fraction: string, cents: string) =>
 		Number(`${fraction.replaceAll('.', '')}.${cents}`);
 
-	return await page.$$eval(label, movement =>
-		movement
-			.filter(a => a.getElementsByClassName(negativeSymbol)[0] === undefined)
-			.map(a => {
-				const url = a.href;
-				const date = a.getElementsByTagName('time')[0]!.textContent!;
-				const fraction =
-					a.getElementsByClassName(amountFraction)[0]!.textContent!;
-				const cents = a.getElementsByClassName(amountCents)[0]!.textContent!;
-				const amount = formatAmount(fraction, cents);
+	const movements = await page.$$eval(
+		label,
+		(movement, negativeSymbol, amountCents, amountFraction) =>
+			movement
+				.filter(a => a.getElementsByClassName(negativeSymbol)[0] === undefined)
+				.map(a => {
+					const url = a.href;
+					const date = a.getElementsByTagName('time')[0]!.textContent!;
+					const fraction =
+						a.getElementsByClassName(amountFraction)[0]!.textContent!;
+					const cents = a.getElementsByClassName(amountCents)[0]!.textContent!;
 
-				return {url, date, amount};
-			}),
+					return {url, date, fraction, cents};
+				}),
+		negativeSymbol,
+		amountCents,
+		amountFraction,
 	);
+
+	return movements.map(({url, date, fraction, cents}) => ({
+		url,
+		date,
+		amount: formatAmount(fraction, cents),
+	}));
 };
 
 const openMovement = async ({
@@ -68,18 +95,28 @@ const waitForIdSelector = async ({page}: {page: Page}) => {
 		.catch(() => false);
 };
 
-const retryOnError = async ({page, attempt}: {page: Page; attempt: number}) => {
-	return new Promise<boolean>(async resolve => {
-		setTimeout(async () => {
-			page.reload({waitUntil: 'networkidle0'});
+const retryOnError = async ({page}: {page: Page}) => {
+	for (let attempt = 1; attempt <= 2; attempt++) {
+		console.log('reintento ' + attempt);
+		try {
+			await page.reload({waitUntil: 'networkidle0'});
 			const pageLoadedCorrectly = await waitForIdSelector({page});
-			if (pageLoadedCorrectly) return resolve(true);
-			if (attempt === 3) return resolve(false);
-
-			return retryOnError({page, attempt: attempt + 1}).then(resolve);
-		}, 2000);
-	});
+			if (pageLoadedCorrectly) return true;
+		} catch (error) {
+			console.error(`Error on attempt ${attempt} to reload page:`, error);
+			if (attempt === 2) return false;
+		}
+	}
 };
+
+// const retryOnError = async ({page}: {page: Page}) => {
+// 	for (let attempt = 1; attempt <= 2; attempt++) {
+// 		page.reload({waitUntil: 'networkidle0'});
+// 		const pageLoadedCorrectly = await waitForIdSelector({page});
+// 		if (pageLoadedCorrectly) return true;
+// 		if (attempt === 3) return false;
+// 	}
+// };
 
 const waitForSelectors = async ({page}: {page: Page}) => {
 	const {type, status, userName, userDetails} = movementClassSelectors;
@@ -174,8 +211,7 @@ const getDetailedMovementHandler = async ({
 }): Promise<DetailedMovement | Movement> => {
 	const page = await openMovement({browser, url: movement.url});
 	const pageLoadedCorrectly =
-		(await waitForIdSelector({page})) ||
-		(await retryOnError({attempt: 1, page}));
+		(await waitForIdSelector({page})) || (await retryOnError({page}));
 	if (!pageLoadedCorrectly) return movement;
 
 	const {statusDoesntExist, userInfoDoesntExist, typeDoesntExist} =
@@ -204,59 +240,112 @@ const getPageDetailedMovements = async ({
 	await goToActivities({page, pageNumber});
 	const movements = await getPageMovements({page});
 	return Promise.all(
-		movements.map(async movement =>
-			getDetailedMovementHandler({browser, movement}),
-		),
+		movements.map(movement => getDetailedMovementHandler({browser, movement})),
 	);
 };
 
 export const runner = async ({
 	page,
 	browser,
-	statusData,
 	startFromId,
 	maxPage,
+	findMovement,
 }: {
 	page: Page;
 	browser: Browser;
-	statusData?: {lastId: string; cookiesExpiration: number};
-	startFromId: string;
-	maxPage: number;
-}) => {
+	startFromId?: string;
+	maxPage?: number;
+} & Omit<MercadoPagoScraperDependencies, 'setMovements'>) => {
 	const detailedMovements: DetailedMovement[] = [];
 	const failedAttempts: Movement[] = [];
+
+	const finalPageNumber = await getFinalPageNumberOnActivities({page});
 
 	for (
 		let pageNumber = 1,
 			inMaxPage = false,
 			foundLastIndex = false,
 			startSurpassed = false;
-		foundLastIndex === false && startSurpassed === false && inMaxPage === false;
+		!foundLastIndex && !startSurpassed && !inMaxPage;
 		pageNumber++
 	) {
-		const pageDetailedMovemets = await getPageDetailedMovements({
+		const pageDetailedMovements = await getPageDetailedMovements({
 			page,
 			browser,
 			pageNumber,
 		});
-		pageDetailedMovemets.forEach(movement => {
+		pageDetailedMovements.forEach(movement => {
 			if (movement === null || !('id' in movement)) return;
 
-			if (movement.id === startFromId) {
+			if (startSurpassed || foundLastIndex) return;
+
+			if (startFromId !== undefined && movement.id === startFromId) {
 				startSurpassed = true;
 				return detailedMovements.push(movement);
 			}
 
-			if (statusData === undefined) return detailedMovements.push(movement);
-
-			if (statusData.lastId === movement.id) return (foundLastIndex = true);
+			const movementAlreadyExist = findMovement(movement) !== undefined;
+			if (movementAlreadyExist) return (foundLastIndex = true);
 
 			return detailedMovements.push(movement);
 		});
 
-		if (maxPage === pageNumber) inMaxPage = true;
+		if (maxPage !== undefined && maxPage === pageNumber) inMaxPage = true;
+		if (finalPageNumber === pageNumber) foundLastIndex = true;
 	}
 
 	await browser.close();
 	return detailedMovements;
 };
+
+// export const runner = async ({
+// 	page,
+// 	browser,
+// 	startFromId,
+// 	maxPage,
+// 	findMovement,
+// }: {
+// 	page: Page;
+// 	browser: Browser;
+// 	startFromId?: string;
+// 	maxPage?: number;
+// } & Omit<MercadoPagoScraperDependencies, 'setMovements'>) => {
+// 	const detailedMovements: DetailedMovement[] = [];
+// 	const failedAttempts: Movement[] = [];
+
+// 	const finalPageNumber = await getFinalPageNumberOnActivities({page});
+
+// 	for (
+// 		let pageNumber = 1,
+// 			inMaxPage = false,
+// 			foundLastIndex = false,
+// 			startSurpassed = false;
+// 		foundLastIndex === false && startSurpassed === false && inMaxPage === false;
+// 		pageNumber++
+// 	) {
+// 		const pageDetailedMovemets = await getPageDetailedMovements({
+// 			page,
+// 			browser,
+// 			pageNumber,
+// 		});
+
+// 		pageDetailedMovemets.forEach(movement => {
+// 			if (movement === null || !('id' in movement)) return;
+
+// 			if (startFromId !== undefined && movement.id === startFromId) {
+// 				startSurpassed = true;
+// 				return detailedMovements.push(movement);
+// 			}
+
+// 			const movementAlreadyExist = findMovement(movement) !== undefined;
+
+// 			return detailedMovements.push(movement);
+// 		});
+
+// 		if (maxPage !== undefined && maxPage === pageNumber) inMaxPage = true;
+// 		if (finalPageNumber === pageNumber) inMaxPage = true;
+// 	}
+
+// 	await browser.close();
+// 	return detailedMovements;
+// };
