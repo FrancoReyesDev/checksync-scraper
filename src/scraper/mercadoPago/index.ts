@@ -63,7 +63,7 @@ export const mercadoPagoScraper: MercadoPagoScraper = ({
 			browser !== null
 		)
 			finish();
-		workingInterval = setInterval(() => {}, config.scrap.frequency);
+		workingInterval = setInterval(scrap, config.scrap.frequency);
 	};
 
 	const logout = () => {

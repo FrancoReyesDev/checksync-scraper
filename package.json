@@ -27,8 +27,6 @@
 		"typescript": "^5.4.5"
 	},
 	"dependencies": {
-		"puppeteer": "^22.10.0",
-		"sqlite3": "^5.1.7",
-		"typeorm": "^0.3.20"
+		"puppeteer": "^22.10.0"
 	}
 }
