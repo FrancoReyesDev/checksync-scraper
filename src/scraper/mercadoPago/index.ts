@@ -88,6 +88,8 @@ export const mercadoPagoScraper: MercadoPagoScraper = ({
 			startFromId: config.scrap.startFromId,
 			maxPage: config.scrap.maxPage,
 		});
+
+		setMovements(movements);
 	};
 
 	const finish = () => {
