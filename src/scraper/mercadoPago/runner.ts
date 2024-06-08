@@ -245,6 +245,7 @@ const getPageDetailedMovements = async ({
 };
 
 export const runner = async ({
+	//no tiene sentido que el runner tenga la opcion de cerrarse externamente
 	page,
 	browser,
 	startFromId,
