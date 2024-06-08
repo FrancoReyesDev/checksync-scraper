@@ -60,7 +60,11 @@ export const mercadoPagoScraper: MercadoPagoScraper = ({
 		if (status.isLoggedIn === false || workingInterval !== null) finish();
 		console.log('start on ' + getConfig().name);
 
-		workingInterval = setInterval(() => scrap(true), config.scrap.frequency);
+		scrap(true);
+		workingInterval = setInterval(() => {
+			console.log('intervalo');
+			scrap(true);
+		}, config.scrap.frequency);
 	};
 
 	const logout = () => {
@@ -71,6 +75,7 @@ export const mercadoPagoScraper: MercadoPagoScraper = ({
 	const scrap = async (visible: boolean = false) => {
 		if (sessionCookies.length === 0) return;
 
+		console.log('scrapeando...');
 		const browser = await puppeteer.launch({headless: !visible});
 		const page = await loginWithCookies({
 			loggedOrigin: config.loggedOrigin,
