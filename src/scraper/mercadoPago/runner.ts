@@ -294,6 +294,6 @@ export const runner = async ({
 		if (finalPageNumber === pageNumber) foundLastIndex = true;
 	}
 
-	await browser.close();
+	// await browser.close();
 	return detailedMovements;
 };

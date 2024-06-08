@@ -50,20 +50,17 @@ export const mercadoPagoScraper: MercadoPagoScraper = ({
 			return {login: handleLogin, close};
 		};
 
-	const login: ReturnType<MercadoPagoScraper>['login'] =
-		async newSessionCookies => {
-			sessionCookies = newSessionCookies;
-			status.isLoggedIn = true;
-		};
+	const login: ReturnType<MercadoPagoScraper>['login'] = newSessionCookies => {
+		console.log('login on ' + getConfig().name);
+		sessionCookies = newSessionCookies;
+		status.isLoggedIn = true;
+	};
 
 	const start = () => {
-		if (
-			status.isLoggedIn === false ||
-			workingInterval !== null ||
-			browser !== null
-		)
-			finish();
-		workingInterval = setInterval(scrap, config.scrap.frequency);
+		if (status.isLoggedIn === false || workingInterval !== null) finish();
+		console.log('start on ' + getConfig().name);
+
+		workingInterval = setInterval(() => scrap(true), config.scrap.frequency);
 	};
 
 	const logout = () => {
@@ -74,8 +71,7 @@ export const mercadoPagoScraper: MercadoPagoScraper = ({
 	const scrap = async (visible: boolean = false) => {
 		if (sessionCookies.length === 0) return;
 
-		if (browser === null)
-			browser = await puppeteer.launch({headless: !visible});
+		const browser = await puppeteer.launch({headless: !visible});
 		const page = await loginWithCookies({
 			loggedOrigin: config.loggedOrigin,
 			sessionCookies,
@@ -88,6 +84,8 @@ export const mercadoPagoScraper: MercadoPagoScraper = ({
 			startFromId: config.scrap.startFromId,
 			maxPage: config.scrap.maxPage,
 		});
+
+		browser.close();
 
 		setMovements(movements);
 	};
