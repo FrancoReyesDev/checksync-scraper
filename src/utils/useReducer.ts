@@ -4,7 +4,9 @@ export const useReducer = <State, Action>(
 ) => {
   let state = initial;
 
-  const dispatch = (action: Action) => (state = reducer(state, action));
+  const dispatch = (action: Action) => {
+    state = reducer(state, action);
+  };
 
   return {
     dispatch,

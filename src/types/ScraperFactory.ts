@@ -1,6 +1,7 @@
 import { Cookie } from "puppeteer";
 import { ScraperConfig } from "./ScraperConfig";
-import { LoginClientHandler } from "./Lib";
+import { LaunchLogin } from "./Lib";
+import { ScraperStatus } from "./ScraperStatus";
 
 export type ScraperDependencies<M> = {
   findMovement: (movement: M) => M | undefined;
@@ -11,15 +12,19 @@ export type ScraperFactory<C extends ScraperConfig, Dependencies> = (
   dependencies: Dependencies
 ) => {
   getConfig: () => C;
-  getStatus: () => {
-    isWorking: boolean;
-    isLoggedIn: boolean;
-  };
-  getSessionCookies: () => Cookie[]; // Este metodo no se debe exponer de ninguna manera
-  login: (sessionCookies: Cookie[]) => void;
+  getStatus: () => ScraperStatus;
+
+  login: (sessionCookies: Cookie[]) =>
+    | {
+        error: string;
+      }
+    | {
+        success: string;
+      };
+
   logout: () => void;
   start: () => void;
   finish: () => void;
-  scrap: (visible: boolean) => Promise<void>;
-  loginClientHandler: () => LoginClientHandler;
+  scrap: () => void;
+  launchLogin: LaunchLogin;
 };
