@@ -26,5 +26,5 @@ export type ScraperFactory<C extends ScraperConfig, Dependencies> = (
   start: () => void;
   finish: () => void;
   scrap: () => void;
-  launchLogin: LaunchLogin;
+  launchLogin: () => ReturnType<LaunchLogin>;
 };
