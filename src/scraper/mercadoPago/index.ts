@@ -11,7 +11,7 @@ import { loginWithCookies } from "src/lib/loginWithCookies";
 import { launchLogin } from "src/lib/launchLogin";
 import { useReducer } from "src/utils/useReducer";
 import { ScraperStatus } from "src/types/ScraperStatus";
-import { SessionCookiesSchema } from "src/schemas/SessionCookiesSchema";
+import { SessionCookiesSchema } from "src/schemas/sessionCookiesSchema";
 
 export const config = {
   name: "mercado pago",
