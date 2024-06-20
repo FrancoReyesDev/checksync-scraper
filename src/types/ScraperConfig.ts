@@ -7,6 +7,6 @@ export type ScraperConfig = {
 	scrap: {
 		frequency: number;
 		startFromId: string; // Fecha en dd/mm/yyyy
-		maxPage: number;
+		// maxPage: number;
 	};
 };

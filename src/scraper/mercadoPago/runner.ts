@@ -5,7 +5,7 @@ import {
 	Movement,
 } from './types';
 
-const goToActivities = async ({
+const goToActivitiesWithPageNumber = async ({
 	page,
 	pageNumber,
 }: {
@@ -18,7 +18,7 @@ const goToActivities = async ({
 };
 
 const getFinalPageNumberOnActivities = async ({page}: {page: Page}) => {
-	await goToActivities({page, pageNumber: 1});
+	await goToActivitiesWithPageNumber({page, pageNumber: 1});
 	const paginationButton = 'li.andes-pagination__button';
 
 	await page.waitForSelector(paginationButton);
@@ -85,7 +85,7 @@ const movementClassSelectors = {
 	userDetails: 'li.user-info-v2__detail',
 };
 
-const waitForIdSelector = async ({page}: {page: Page}) => {
+const waitForIdSelectorInMovementPage = async ({page}: {page: Page}) => {
 	const {id} = movementClassSelectors;
 	return page
 		.waitForSelector(id, {
@@ -95,30 +95,31 @@ const waitForIdSelector = async ({page}: {page: Page}) => {
 		.catch(() => false);
 };
 
-const retryOnError = async ({page}: {page: Page}) => {
-	for (let attempt = 1; attempt <= 2; attempt++) {
-		console.log('reintento ' + attempt);
-		try {
+const retryWaitForIdSelectorInMovementPageOnError = async ({
+	page,
+}: {
+	page: Page;
+}) => {
+	let attempt = 1;
+	try {
+		for (; attempt <= 2; attempt++) {
+			console.log('reintento ' + attempt);
+
 			await page.reload({waitUntil: 'networkidle0'});
-			const pageLoadedCorrectly = await waitForIdSelector({page});
+			const pageLoadedCorrectly = await waitForIdSelectorInMovementPage({
+				page,
+			});
 			if (pageLoadedCorrectly) return true;
-		} catch (error) {
-			console.error(`Error on attempt ${attempt} to reload page:`, error);
-			if (attempt === 2) return false;
 		}
+	} catch (error) {
+		console.error(`Error on attempt ${attempt} to reload page:`, error);
+		if (attempt === 2) return false;
+	} finally {
+		return false;
 	}
 };
 
-// const retryOnError = async ({page}: {page: Page}) => {
-// 	for (let attempt = 1; attempt <= 2; attempt++) {
-// 		page.reload({waitUntil: 'networkidle0'});
-// 		const pageLoadedCorrectly = await waitForIdSelector({page});
-// 		if (pageLoadedCorrectly) return true;
-// 		if (attempt === 3) return false;
-// 	}
-// };
-
-const waitForSelectors = async ({page}: {page: Page}) => {
+const waitForSelectorsInMovementPage = async ({page}: {page: Page}) => {
 	const {type, status, userName, userDetails} = movementClassSelectors;
 
 	let statusDoesntExist = false;
@@ -147,7 +148,7 @@ const waitForSelectors = async ({page}: {page: Page}) => {
 	};
 };
 
-const formatDetails = (details: Element[]) =>
+const formatDetailsFromMovementData = (details: Element[]) =>
 	details.reduce((acc, li) => {
 		const text = li.textContent;
 		if (text === null) return acc;
@@ -170,7 +171,7 @@ const formatDetails = (details: Element[]) =>
 		return acc;
 	}, {} as DetailedMovement['userDetails']);
 
-const getDetailedMovement = async ({
+const getDataFromMovementPage = async ({
 	page,
 	typeDoesntExist,
 	userInfoDoesntExist,
@@ -186,23 +187,29 @@ const getDetailedMovement = async ({
 			span.textContent!.match(/\d+/g)![0].trim(),
 		),
 		typeDoesntExist
-			? undefined
+			? null
 			: page.$eval(movementClassSelectors.type, div => div.textContent),
 		statusDoesntExist
-			? undefined
+			? null
 			: page.$eval(movementClassSelectors.status, div => div.textContent),
 		userInfoDoesntExist
-			? undefined
+			? null
 			: page.$eval(movementClassSelectors.userName, li => li.textContent),
 		userInfoDoesntExist
-			? undefined
-			: page.$$eval(movementClassSelectors.userDetails, formatDetails),
+			? {}
+			: page.$$eval(
+					movementClassSelectors.userDetails,
+					formatDetailsFromMovementData,
+			  ),
 	]);
 
-	return {id, type, status, userDetails, userName};
+	return {id, type, status, userDetails, userName} satisfies Omit<
+		DetailedMovement,
+		keyof Movement
+	>;
 };
 
-const getDetailedMovementHandler = async ({
+const getDataFromMovementPageIfLoadCorrectly = async ({
 	browser,
 	movement,
 }: {
@@ -211,13 +218,14 @@ const getDetailedMovementHandler = async ({
 }): Promise<DetailedMovement | Movement> => {
 	const page = await openMovement({browser, url: movement.url});
 	const pageLoadedCorrectly =
-		(await waitForIdSelector({page})) || (await retryOnError({page}));
+		(await waitForIdSelectorInMovementPage({page})) ||
+		(await retryWaitForIdSelectorInMovementPageOnError({page}));
 	if (!pageLoadedCorrectly) return movement;
 
 	const {statusDoesntExist, userInfoDoesntExist, typeDoesntExist} =
-		await waitForSelectors({page});
+		await waitForSelectorsInMovementPage({page});
 
-	const detailedMovement = await getDetailedMovement({
+	const detailedMovement = await getDataFromMovementPage({
 		page,
 		statusDoesntExist,
 		typeDoesntExist,
@@ -228,7 +236,7 @@ const getDetailedMovementHandler = async ({
 	return {...movement, ...detailedMovement};
 };
 
-const getPageDetailedMovements = async ({
+const getAllMovementsFromPageAsync = async ({
 	pageNumber,
 	page,
 	browser,
@@ -237,64 +245,53 @@ const getPageDetailedMovements = async ({
 	page: Page;
 	browser: Browser;
 }) => {
-	await goToActivities({page, pageNumber});
+	await goToActivitiesWithPageNumber({page, pageNumber});
 	const movements = await getPageMovements({page});
 	return Promise.all(
-		movements.map(movement => getDetailedMovementHandler({browser, movement})),
+		movements.map(movement =>
+			getDataFromMovementPageIfLoadCorrectly({browser, movement}),
+		),
 	);
 };
 
 export const runner = async ({
-	//no tiene sentido que el runner tenga la opcion de cerrarse externamente
 	page,
 	browser,
 	startFromId,
-	maxPage,
+
 	findMovement,
 }: {
 	page: Page;
 	browser: Browser;
 	startFromId?: string;
-	maxPage?: number;
 } & Omit<MercadoPagoScraperDependencies, 'setMovements'>) => {
 	const detailedMovements: DetailedMovement[] = [];
 	const failedAttempts: Movement[] = [];
 
 	const finalPageNumber = await getFinalPageNumberOnActivities({page});
 
-	for (
-		let pageNumber = 1,
-			inMaxPage = false,
-			foundLastIndex = false,
-			startSurpassed = false;
-		!foundLastIndex && !startSurpassed && !inMaxPage;
-		pageNumber++
-	) {
-		const pageDetailedMovements = await getPageDetailedMovements({
+	for (let pageNumber = 1; finalPageNumber <= pageNumber; pageNumber++) {
+		const pageMovements = await getAllMovementsFromPageAsync({
 			page,
 			browser,
 			pageNumber,
 		});
-		pageDetailedMovements.forEach(movement => {
-			if (movement === null || !('id' in movement)) return;
 
-			if (startSurpassed || foundLastIndex) return;
-
-			if (startFromId !== undefined && movement.id === startFromId) {
-				startSurpassed = true;
-				return detailedMovements.push(movement);
+		for (const movement of pageMovements) {
+			if (!('id' in movement)) {
+				failedAttempts.push(movement);
+				continue;
 			}
 
-			const movementAlreadyExist = findMovement(movement) !== undefined;
-			if (movementAlreadyExist) return (foundLastIndex = true);
+			const movementAlreadyExist = (await findMovement(movement)) !== null;
+			const inStartId =
+				startFromId !== undefined && movement.id === startFromId;
 
-			return detailedMovements.push(movement);
-		});
-
-		if (maxPage !== undefined && maxPage === pageNumber) inMaxPage = true;
-		if (finalPageNumber === pageNumber) foundLastIndex = true;
+			if (movementAlreadyExist || inStartId)
+				return {detailedMovements, failedAttempts};
+			detailedMovements.push(movement);
+		}
 	}
 
-	// await browser.close();
-	return detailedMovements;
+	return {detailedMovements, failedAttempts};
 };
